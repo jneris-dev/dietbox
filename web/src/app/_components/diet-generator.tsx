@@ -1,15 +1,16 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Loader, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DietData } from "@/types/diet-data";
+import ReactMarkdown from "react-markdown";
 
 export function DietGenerator({ data }: {data: DietData}) {
   const [output, setOutput] = useState<string>("");
-  const [streaming, setStreaming] = useState<boolean>(false);
+  const [isStreaming, setIsStreaming] = useState<boolean>(false);
 
   const controllerRef = useRef<AbortController | null>(null);
 
@@ -18,7 +19,7 @@ export function DietGenerator({ data }: {data: DietData}) {
     controllerRef.current = controller;
 
     setOutput("");
-    setStreaming(true);
+    setIsStreaming(true);
     try {
       const response = await fetch("http://localhost:3333/plan", {
         method: "POST",
@@ -54,15 +55,15 @@ export function DietGenerator({ data }: {data: DietData}) {
 
       console.error("Erro ao gerar dieta:", err);
     } finally {
-      setStreaming(false);
+      setIsStreaming(false);
       controllerRef.current = null;
     }
   }
 
   async function handleGenerate() {
-    if (streaming) {
+    if (isStreaming) {
       controllerRef.current?.abort();
-      setStreaming(false);
+      setIsStreaming(false);
       return;
     }
 
@@ -78,16 +79,25 @@ export function DietGenerator({ data }: {data: DietData}) {
             size="lg"
             onClick={handleGenerate}
           >
-            <Sparkles name="w-6 h-6" />
-            Gerar dieta
+            {isStreaming ? <Loader className="w-6 h-6" /> : <Sparkles name="w-6 h-6" />}
+            {isStreaming ? "Parar dieta" : "Gerar Dieta"}
           </Button>
         </div>
 
-        <div className="bg-card rounded-lg p-6 border border-border max-h-125 overflow-y-auto">
+        {output && (
+          <div className="bg-card rounded-lg p-6 border border-border max-h-125 overflow-y-auto">
           <div className="prose prose-sm max-w-none">
-            {output}
+            <ReactMarkdown
+              components={{
+                h1: ({ node, ...props }) => <h1 className="text-xl font-bold text-green-600 my-1" {...props} />,
+                h2: ({ node, ...props }) => <h2 className="text-2xl font-bold text-zinc-900 mb-1" {...props} />,
+              }}
+            >
+              {output}
+            </ReactMarkdown>
           </div>
         </div>
+        )}
       </Card>
     </div>
   );
